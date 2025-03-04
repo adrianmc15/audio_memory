@@ -42,8 +42,8 @@ Ensure you have **Python 3.11.10** installed.
 ### Steps
 1. Clone the repository:
    ```sh
-   git clone <repository_url>
-   cd <repository_name>
+   git clone git@github.com:adrianmc15/audio_memory.git
+   cd audio_memory
    ```
 2. Create a virtual environment:
    ```sh
