@@ -1,0 +1,15 @@
+debugging.ipynb
+individual_linking_*
+data/library/*
+data/output/*
+data/processed/*
+data/raw/*
+data/temp/*
+plan.md
+rough_work.txt
+rough_working.json
+demo_components.drawio
+.env
+!data/raw/mango_kefir_smoothie.wav
+!*.placeholder
+venv

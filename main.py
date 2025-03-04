@@ -658,7 +658,7 @@ if __name__ == "__main__":
     try:
         for folder in ["library", "output", "processed", "raw", "temp"]:
             # if data/{folder} does not exist, create the directory
-            if os.path.exists(f"data/{folder}"):
+            if not os.path.exists(f"data/{folder}"):
                 os.makedirs(f"data/{folder}")
 
         if len(sys.argv) > 1 and sys.argv[1].lower() == "example":

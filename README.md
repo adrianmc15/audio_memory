@@ -55,6 +55,8 @@ Ensure you have **Python 3.11.10** installed.
    pip install -r requirements.txt
    ```
 
+4. Set up the following environment variables:
+   - `ASSEMBLYAI_API_KEY`: AssemblyAI API key for speech-to-text transcription (this can be done by getting an API key at https://www.assemblyai.com/ creating a `.env` file in the root directory with the key)
 ## Usage
 ### Recording Live Conversations
 Run the main script to start recording and processing live conversations:
