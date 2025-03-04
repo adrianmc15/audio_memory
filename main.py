@@ -656,6 +656,11 @@ def transcribe_audio_chunk(input_path, timestamp, input_containing_path=RAW_PATH
 
 if __name__ == "__main__":
     try:
+        for folder in ["library", "output", "processed", "raw", "temp"]:
+            # if data/{folder} does not exist, create the directory
+            if os.path.exists(f"data/{folder}"):
+                os.makedirs(f"data/{folder}")
+
         if len(sys.argv) > 1 and sys.argv[1].lower() == "example":
             file_name = "mango_kefir_smoothie.wav"
             timestamp_dt = datetime.now()
