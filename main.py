@@ -5,7 +5,6 @@
 # > once the transcription is complete, use the established method to link to the original voices
 # > then allow queries from the LLM
 
-
 import sys
 import pyaudio
 import wave
@@ -44,7 +43,7 @@ MIN_UTTERANCE_DURATION = 1000  # Minimum duration of an utterance in millisecond
 OUTPUT_FILENAME_TEMPLATE = "{}.wav"
 
 def diarize_file(input_path, input_containing_path=RAW_PATH, processed_folder_path=PROCESSED_PATH):
-    # for file in os.listdir(raw_path):
+
     try:
         os.mkdir(os.path.join(processed_folder_path, input_path.split(".")[0]))
     except FileExistsError:
@@ -110,6 +109,8 @@ def record_audio_chunk():
 
 def extract_speaker_utterances(transcript_path,raw_path=RAW_PATH,min_utterance_duration=MIN_UTTERANCE_DURATION):
     """Extract and sort utterances by duration for each speaker."""
+
+
     print(f"\nProcessing transcript: {transcript_path}")
     
     with open(transcript_path, 'r') as f:
@@ -128,6 +129,8 @@ def extract_speaker_utterances(transcript_path,raw_path=RAW_PATH,min_utterance_d
     print(f"Total words in transcript: {len(data['words'])}")
     
     for i, word in enumerate(data['words']):
+        # if a new speaker has started, or there is a long enough pause from the last word:
+        # save the previous utterance and start a new utterance
         if current_speaker != word['speaker'] or (
             current_utterance and 
             word['start_time'] - current_utterance[-1]['end_time'] > max_pause
@@ -136,16 +139,22 @@ def extract_speaker_utterances(transcript_path,raw_path=RAW_PATH,min_utterance_d
             if current_utterance:
                 duration = current_utterance[-1]['end_time'] - current_utterance[0]['start_time']
                 if duration >= min_utterance_duration:
+                # if the duration of the utterance is long enough, push it to that speaker's heap
                     if current_speaker not in speaker_utterances:
+                        # if the current_speaker does not have a heap yet, create it's heap
                         speaker_utterances[current_speaker] = []
+
                     # Store as tuple of (duration, utterance) for sorting
+                    # and add the utterance to that speaker's heap
                     heapq.heappush(speaker_utterances[current_speaker], 
                                  (-duration, current_utterance))
                     print(f"Added utterance for speaker {current_speaker} with duration {duration}ms")
             
+            # for the new utterance, add the current word (the first word of the utterance)
             current_utterance = [word]
             current_speaker = word['speaker']
         else:
+            # if we are not starting a new utterance, just add the current word
             current_utterance.append(word)
     
     # Add the last utterance
@@ -377,10 +386,6 @@ def diarize_combined_audio(combined_audio_path,output_path=OUTPUT_PATH):
 
 def update_transcripts(speaker_map):
 
-    # IMPORTANT!!!! THIS UPDATE NEEDS TO BE MADE
-    # TODO: update the unified_label to prioritize the existing
-    # library name
-
     for speaker in speaker_map:
         # open the transcript_file
         file = speaker["transcript_path"]
@@ -486,25 +491,26 @@ def update_speaker_library(updated_speaker_mapping, speaker_data):
 
 
 def link_unified_mappings(combined_diarized_transcript, speaker_mapping):
+
     # Iterate through each segment in the speaker_mapping
     for segment in speaker_mapping:
         segment_start = segment["start_time"]
         segment_end = segment["end_time"]
         
-        # Initialize a dictionary to count the speaking time for each speaker in this segment
+        # keeps track of time each speaker speaks in this segment
         speaker_time_counts = {}
         
-        # Iterate through each utterance in the combined_diarized_transcript
+        # go through each utterance in the combined_diarized_transcript
         for utterance in combined_diarized_transcript["utterances"]:
             utterance_start = utterance["start_time"]
             utterance_end = utterance["end_time"]
             speaker = utterance["speaker"]
             
-            # Calculate the overlap between the utterance and the segment
+            # calculate the "overlap" between the utterance and the segment
             overlap_start = max(segment_start, utterance_start)
             overlap_end = min(segment_end, utterance_end)
             
-            # If there is an overlap, calculate the duration and add it to the speaker's total
+            # if overlap, calculate the duration and add it to the speaker's total
             if overlap_start < overlap_end:
                 overlap_duration = overlap_end - overlap_start
                 if speaker in speaker_time_counts:
@@ -512,13 +518,13 @@ def link_unified_mappings(combined_diarized_transcript, speaker_mapping):
                 else:
                     speaker_time_counts[speaker] = overlap_duration
         
-        # Determine the speaker with the maximum speaking time in this segment
+        # determine the speaker with the maximum speaking time in segment
         if speaker_time_counts:
             unified_speaker = max(speaker_time_counts, key=speaker_time_counts.get)
         else:
-            unified_speaker = None  # No speaker found in this segment
+            unified_speaker = None  # no speaker in segment
         
-        # Add the unified_speaker to the segment
+        # add the unified_speaker to segment
         segment["unified_speaker"] = unified_speaker
 
     library_speakers_unified = {}
@@ -530,21 +536,21 @@ def link_unified_mappings(combined_diarized_transcript, speaker_mapping):
 
     new_speakers_unified = []
 
-    # Assign final_speaker labels
+    # assigning final_speaker labels
     new_speakers_unified = []
     for utterance in speaker_mapping:
         if utterance["unified_speaker"] in library_speakers_unified.keys():
-            # If the unified_speaker is from the library, use the original speaker_id
+            # if the unified_speaker is from the library, use the original speaker_id
             utterance["final_speaker"] = library_speakers_unified[utterance["unified_speaker"]]
             utterance["new_speaker"] = False
         else:
             if utterance["unified_speaker"] not in new_speakers_unified:
-                # Assign the next sequential alphabet letter
+                # assign the next sequential alphabet letter
                 utterance["final_speaker"] = chr(ord('A') + len(library_speakers_unified) + len(new_speakers_unified))
                 new_speakers_unified.append(utterance["unified_speaker"])
                 utterance["new_speaker"] = True
             else:
-                # If the unified_speaker is already in new_speakers_unified, reuse the assigned letter
+                # if the unified_speaker is already in new_speakers_unified, reuse the assigned letter
                 utterance["final_speaker"] = chr(ord('A') + len(library_speakers_unified) + new_speakers_unified.index(utterance["unified_speaker"]))
                 utterance["new_speaker"] = True
     
@@ -563,25 +569,24 @@ def append_to_transcript(json_file_location, start_time, transcript_file_locatio
         start_time (datetime): A datetime object representing the start time of the recording.
         transcript_file_location (str): Path to the transcript file where the output will be appended.
     """
-    # Load the JSON data
+
     with open(json_file_location, 'r') as file:
         data = json.load(file)
 
-    # Ensure words are sorted by start_time
+    # sort words by start_time
     data['words'].sort(key=lambda w: w['start_time'])
 
-    # Initialize variables
     current_speaker = None
     current_sentence = []
     sentences = []
     first_word = None  # Track the first word of each sentence for timestamping
 
-    # Process each word
+    # process each word
     for word_info in data['words']:
         word = word_info['word']
         speaker = word_info['final_speaker']
 
-        # If the speaker changes, finalize the current sentence
+        # if speaker changes, finalize the current sentence
         if speaker != current_speaker:
             if current_sentence:
                 sentences.append((current_speaker, ' '.join(current_sentence), first_word))
@@ -589,31 +594,24 @@ def append_to_transcript(json_file_location, start_time, transcript_file_locatio
             current_speaker = speaker
             first_word = word_info  # Track first word for timestamp
 
-        # Add the word to the current sentence
+        # add the word to the current sentence
         current_sentence.append(word)
 
-    # Append the last sentence if it exists
+    # append last sentence if it exists
     if current_sentence:
         sentences.append((current_speaker, ' '.join(current_sentence), first_word))
 
-    # Open the transcript file in append mode
     with open(transcript_file_location, 'a') as transcript_file:
-        # Format and append each sentence to the transcript file
+        # format and append each sentence to the transcript file
         for speaker, sentence, first_word_info in sentences:
-            # Use the start_time of the first word in the sentence
+            # start_time of the first word in the sentence
             timestamp = start_time + timedelta(milliseconds=first_word_info['start_time'])
             timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Extract the speaker's name properly
+            # get speakers name
             transcript_speaker = speaker.split("_")[1] if "_" in speaker else speaker
-
-            # Format the line
             line = f"[{timestamp_str}] - {transcript_speaker}: {sentence}\n"
-
-            # Append the line to the transcript file
             transcript_file.write(line)
-
-
 
 def process_recording(word_diarized_path, timestamp_dt, raw_path=RAW_PATH, processed_path=PROCESSED_PATH,temp_path=TEMP_PATH, output_path=OUTPUT_PATH,top_n_utterances=TOP_N_UTTERANCES):
     transcript_file_location = "data/output/transcript.txt"
@@ -632,8 +630,6 @@ def process_recording(word_diarized_path, timestamp_dt, raw_path=RAW_PATH, proce
 
     # update the transcripts
     diarized_combined = diarize_combined_audio(combined_path,output_path=temp_path)
-
-    ### FIX FROM HERE ###
     updated_speaker_mapping = link_unified_mappings(diarized_combined, speaker_mapping)
 
     # update speaker mappings based on word-level transcript

@@ -20,10 +20,10 @@ def query_llm_with_groq(api_key, prompt):
     :param prompt: The prompt to send to the LLM.
     :return: The response from the LLM.
     """
-    # Initialize the Groq client
+    # initialize the Groq client
     client = Groq(api_key=api_key)
     
-    # Send the prompt to the LLM
+    # send the prompt to the LLM
     chat_completion = client.chat.completions.create(
         messages=[
             {
@@ -38,7 +38,7 @@ def query_llm_with_groq(api_key, prompt):
         model="llama-3.3-70b-versatile"  # Replace with the correct model name
     )
     
-    # Extract and return the response
+    # extract and return the response
     return chat_completion.choices[0].message.content
 
 def main(file_path, api_key):
@@ -48,29 +48,29 @@ def main(file_path, api_key):
     :param file_path: Path to the transcript file.
     :param api_key: Your Groq API key.
     """
-    # Read the transcript
+    # read the transcript
     transcript = read_transcript(file_path)
     print("Transcript loaded successfully.")
     
     while True:
-        # Get user question
+        # get user question
         question = input("\nEnter your question about the transcript (or type 'exit' to quit): ")
         if question.lower() == 'exit':
             print("Exiting...")
             break
         
-        # Prepare the prompt for the LLM
+        # prep the prompt for the LLM
         prompt = f"The following is a transcript:\n\n{transcript}\n\nQuestion: {question}\n\nAnswer:"
         
         try:
-            # Query the LLM
+            # query the LLM
             answer = query_llm_with_groq(api_key, prompt)
             print(f"\nAnswer: {answer}")
         except Exception as e:
             print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    # Replace with your actual file path and Groq API key
+    # replace with your actual file path and Groq API key
     file_path = "data/output/transcript.txt"
     api_key = "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"
     
